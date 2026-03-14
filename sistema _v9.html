@@ -1,0 +1,39 @@
+        function handleImageUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    // Aumentamos para 320px para manter densidade de pixels (Super Sampling)
+                    const size = 320; 
+                    canvas.width = size; 
+                    canvas.height = size;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+
+                    // Cálculo para manter o aspecto centralizado (Crop Square)
+                    let sourceX = 0, sourceY = 0, sourceSize = img.width;
+                    if (img.width > img.height) {
+                        sourceSize = img.height;
+                        sourceX = (img.width - img.height) / 2;
+                    } else {
+                        sourceSize = img.width;
+                        sourceY = (img.height - img.width) / 2;
+                    }
+
+                    ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+                    
+                    // Exportando em PNG para máxima qualidade
+                    state.img = canvas.toDataURL('image/png');
+                    save(); 
+                    refreshUI();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        
