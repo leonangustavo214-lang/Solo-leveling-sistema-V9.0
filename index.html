@@ -1,3 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow System - Hunter Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@300;400;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00d4ff;
+            --primary-glow: rgba(0, 212, 255, 0.4);
+            --accent: #ffd700;
+            --danger: #ff2a6d;
+            --xp-color: #00ffcc;
+            --bg-dark: #02050a;
+            --panel-bg: rgba(5, 15, 25, 0.85);
+            --border-style: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        * { box-sizing: border-box; font-family: 'Rajdhani', sans-serif; }
+        
+        body { 
+            margin: 0; background: var(--bg-dark); 
+            background-image: radial-gradient(circle at 50% 50%, #0a192f 0%, #02050a 100%);
+            color: #e0e0e0; display: flex; flex-direction: column; align-items: center; 
+            min-height: 100vh; padding: 20px; overflow-x: hidden; 
+        }
+
+        .system-container { 
+            width: 100%; max-width: 1200px; 
+            display: grid; grid-template-columns: 320px 1fr 300px; 
+            gap: 25px; margin-top: 20px;
+        }
+
+        @media (max-width: 1100px) { .system-container { grid-template-columns: 1fr; } }
+
+        .panel { 
+            background: var(--panel-bg); border: var(--border-style); padding: 20px; 
+            position: relative; backdrop-filter: blur(8px);
+            box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.05);
+            clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+        }
+
+        .avatar-frame { 
+            width: 140px; height: 140px; margin: 0 auto 15px; 
+            border: 2px solid var(--primary); background: #000; 
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; cursor: pointer;
+        }
+        .avatar-frame img { width: 100%; height: 100%; object-fit: cover; }
+
+        .lvl-display { 
+            font-size: 4rem; font-weight: 900; text-align: center; color: #fff;
+            text-shadow: 0 0 10px var(--primary-glow); margin: -5px 0 0 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .days-counter {
+            text-align: center; font-size: 0.8rem; color: var(--accent);
+            letter-spacing: 2px; margin-bottom: 15px; font-weight: bold;
+        }
+
+        .xp-bar-container { width: 100%; height: 6px; background: rgba(0,0,0,0.5); margin: 15px 0; border: 1px solid rgba(0, 212, 255, 0.2); overflow: hidden; }
+        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--xp-color)); width: 0%; transition: width 0.4s ease-out; }
+
+        .mission-tree-panel { max-height: 85vh; overflow-y: auto; border-top: 3px solid var(--primary); }
+        .mission-matrix { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 10px; }
+
+        .mission-node { 
+            aspect-ratio: 1/1; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            cursor: pointer; transition: 0.2s; font-size: 0.5rem; font-weight: bold; text-align: center; padding: 4px;
+        }
+        .mission-node.unlocked { border-color: var(--xp-color); background: rgba(0, 255, 204, 0.1); color: var(--xp-color); }
+        .mission-node.available { border-color: var(--accent); color: var(--accent); animation: pulse 2s infinite linear; }
+        .mission-node.blocked { opacity: 0.1; cursor: default; }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .attr-item { display: flex; align-items: center; background: rgba(0, 212, 255, 0.03); padding: 8px 10px; border-left: 3px solid var(--primary); margin-bottom: 6px; }
+        .attr-name-input, .attr-val-input { background: transparent; border: none; outline: none; color: #fff; }
+        .attr-name-input { color: var(--primary); font-size: 0.75rem; text-transform: uppercase; width: 65%; font-weight: 600; }
+        .attr-val-input { text-align: right; width: 35%; font-size: 1rem; font-weight: bold; }
+
+        .btn { 
+            padding: 10px; border: 1px solid var(--primary); background: rgba(0, 212, 255, 0.05); 
+            cursor: pointer; color: var(--primary); font-weight: bold; text-transform: uppercase; 
+            font-size: 0.7rem; transition: 0.2s; width: 100%; margin-bottom: 5px;
+        }
+        .btn:hover { background: var(--primary); color: #000; }
+
+        .btn-gem { border-color: var(--xp-color); color: var(--xp-color); margin-top: 10px; }
+        .btn-gem:hover { background: var(--xp-color); color: #000; box-shadow: 0 0 15px var(--xp-color); }
+
+        .fixed-gem-link {
+            position: fixed; bottom: 20px; right: 20px; z-index: 5000;
+            width: 60px; height: 60px; background: #050a14;
+            border: 2px solid var(--xp-color); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--xp-color); font-weight: 900;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3); transition: 0.3s;
+            text-decoration: none; font-size: 0.7rem; text-align: center;
+        }
+        .fixed-gem-link:hover { transform: scale(1.1); background: var(--xp-color); color: #000; }
+
+        #popup { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: 90%; max-width: 400px; background: #050a14; border: 2px solid var(--primary); 
+            padding: 25px; z-index: 20000; display: none; text-align: center;
+        }
+        
+        #creation-overlay { position: fixed; inset: 0; background: #02050a; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; }
+        input[type="text"], select { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,212,255,0.3); color: white; padding: 10px; margin-bottom: 12px; }
+
+        .ai-tip-panel { width: 350px; background: rgba(10, 25, 47, 0.9); border: 1px solid var(--accent); padding: 15px; font-size: 0.8rem; color: #ccc; text-align: center; }
+        .code-block { background: #000; padding: 5px; border: 1px solid #333; color: var(--xp-color); font-family: monospace; display: block; margin-top: 5px; font-size: 0.7rem; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <a href="https://gemini.google.com/gem/1q4etlGK5wtzkpm9ODV9xDkEn-2f4AMhX?usp=sharing" target="_blank" class="fixed-gem-link">
+        GEMINI<br>DATA
+    </a>
+
+    <div id="creation-overlay" style="display: none;">
+        <div class="panel" style="width: 350px; text-align: center; clip-path: none;">
+            <h2 style="color:var(--primary);">SISTEMA DE DESPERTAR</h2>
+            <input type="text" id="init-name" placeholder="NOME DO JOGADOR">
+            <select id="init-class">
+                <option>Guerreiro</option><option>Samurai</option><option>Bardo</option>
+                <option>Mago</option><option>Necromante</option><option>Elfo</option>
+            </select>
+            <button class="btn" onclick="finalizeCreation()">SINCRONIZAR</button>
+        </div>
+        <div class="ai-tip-panel">
+            <b style="color:var(--accent)">✦ AI DATA GENERATION</b><br>
+            Crie seu avatar no <b>Gemini</b>:<br>
+            <span class="code-block">"Pixel art 1:1, [DESCRICAO], cyberpunk style, shadow system aesthetic"</span>
+            
+            <button class="btn btn-gem" onclick="window.open('https://gemini.google.com/gem/1q4etlGK5wtzkpm9ODV9xDkEn-2f4AMhX?usp=sharing', '_blank')">
+                ABRIR GEMINI (DATA GENERATOR)
+            </button>
+        </div>
+    </div>
+
+    <input type="file" id="avatar-input" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+
+    <div id="popup">
+        <h3 id="pop-title" style="color:var(--accent)"></h3>
+        <p id="pop-desc"></p>
+        <p id="pop-req" style="color:var(--primary)"></p>
+        <div id="pop-actions"></div>
+        <button class="btn" onclick="closePopup()">VOLTAR</button>
+    </div>
+
+    <div class="system-container">
+        <div class="panel">
+            <div class="avatar-frame" onclick="document.getElementById('avatar-input').click()">
+                <img id="p-img" src="https://i.imgur.com/vHPTb6m.png">
+            </div>
+            <h2 id="disp-name" style="text-align:center; margin-bottom:5px;">---</h2>
+            <p id="disp-class" style="text-align:center; color:var(--primary); font-size:0.75rem; margin-top:0;">---</p>
+            
+            <div class="lvl-display" id="lvl-txt">01</div>
+            <div class="days-counter" id="days-txt">ACTIVE DAYS: 0</div>
+
+            <div class="xp-bar-container"><div class="xp-bar-fill" id="xp-fill"></div></div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="btn" onclick="changeXP(1)">+1% XP</button>
+                <button class="btn" onclick="changeXP(-1)">-1% XP</button>
+            </div>
+            <button class="btn" onclick="addLevel()" style="margin-top:10px; border-color:var(--accent); color:var(--accent)">FORÇAR LVL UP</button>
+            <button class="btn" onclick="resetCharacter()" style="margin-top:30px; color:var(--danger); border:none; opacity:0.4; font-size:0.6rem;">RESET TOTAL</button>
+        </div>
+
+        <div class="panel mission-tree-panel">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                <h3 style="color:var(--primary); margin:0;">SKILL TREE (1 POR TIER)</h3>
+                <span id="tier-info" style="color:var(--accent);">TIERS: 0/15</span>
+            </div>
+            <div class="mission-matrix" id="mission-matrix"></div>
+        </div>
+
+        <div class="panel">
+            <h3 style="color:var(--accent); font-size:0.9rem; margin-top:0;">ATRIBUTOS</h3>
+            <div id="attr-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'shadow_master_v_final_stable_days';
+        
+        const skills = [
+            { name: "Resiliência", desc: "Recuperar-se de falhas sem perder o foco." },
+            { name: "Foco Absoluto", desc: "Triplicar a produção de trabalho." },
+            { name: "Mão do Rei", desc: "Habilidade de delegar tarefas." },
+            { name: "Visão Analítica", desc: "Prever tendências de mercado." },
+            { name: "Comunicação", desc: "Transmitir ideias de forma simples." },
+            { name: "I. Emocional", desc: "Controlar reações internas." },
+            { name: "Disciplina", desc: "Executar rotinas independente do ânimo." },
+            { name: "Negociação", desc: "Equilíbrio de ganhos mútuos." },
+            { name: "Leitura Veloz", desc: "Absorver informação na metade do tempo." },
+            { name: "Networking", desc: "Construir uma guilda de contatos." },
+            { name: "P. Crítico", desc: "Questionar a lógica antes de aceitar." },
+            { name: "Gestão Mana", desc: "Evitar o debuff de Burnout." },
+            { name: "Otimização", desc: "Priorizar tarefas de alto impacto." },
+            { name: "Auto-didatismo", desc: "Aprender sem auxílio de tutores." },
+            { name: "Empatia", desc: "Entender motivações alheias." },
+            { name: "Resolução", desc: "Neutralizar conflitos com calma." },
+            { name: "Adaptabilidade", desc: "Mudar de estratégia no caos." },
+            { name: "Coragem Social", desc: "Falar em público sem ansiedade." },
+            { name: "Estratégia", desc: "Planejar 5 passos à frente." },
+            { name: "Paciência", desc: "Aguardar o momento certo para agir." },
+            { name: "Criatividade", desc: "Gerar soluções inéditas." },
+            { name: "Higiene Mental", desc: "Limpar pensamentos intrusivos." },
+            { name: "Saúde Física", desc: "Suportar longas jornadas de grind." },
+            { name: "Finanças", desc: "Gerenciar ouro para renda passiva." },
+            { name: "Curiosidade", desc: "Motor para novos conhecimentos." },
+            { name: "Humildade", desc: "Permitir novos aprendizados." },
+            { name: "Liderança", desc: "Inspirar outros voluntariamente." },
+            { name: "Idiomas", desc: "Desbloquear novos servidores/países." },
+            { name: "Escrita", desc: "Usar palavras para convencer." },
+            { name: "Ética", desc: "Agir corretamente no escuro." },
+            { name: "M. Muscular", desc: "Automatizar tarefas repetitivas." },
+            { name: "Intuição", desc: "Ouvir o subconsciente." },
+            { name: "Flexibilidade", desc: "Alternar tipos de pensamento." },
+            { name: "Síntese", desc: "Resumir problemas em ações." },
+            { name: "Persistência", desc: "Continuar até o drop de sucesso." },
+            { name: "Organização", desc: "Manter inventário limpo." },
+            { name: "Decisividade", desc: "Tomar decisões sem hesitação." },
+            { name: "Presença", desc: "Estar focado no agora." },
+            { name: "Domínio", desc: "Ser 2x mais rápido com ferramentas." },
+            { name: "Expectativa", desc: "Alinhar o que será entregue." },
+            { name: "Sorte", desc: "Estar preparado para a chance." },
+            { name: "Storytelling", desc: "Tornar ideias inesquecíveis." },
+            { name: "Longo Prazo", desc: "Sacrifício pelo endgame." },
+            { name: "Antifrágil", desc: "Crescer através do estresse." },
+            { name: "Ceticismo", desc: "Não cair em golpes de XP fácil." }
+        ];
+
+        let state = { 
+            name: "", job: "", lvl: 1, xp: 0, img: "", unlockedSkills: [], 
+            creationDate: null,
+            attrs: [
+                ["FORÇA",10], ["AGILIDADE",10], ["VITALIDADE",10], ["INTELIGÊNCIA",10], ["SORTE",10],
+                ["PERCEPÇÃO",10], ["DESTREZA",10], ["VONTADE",10], ["CARISMA",10], ["RESISTÊNCIA",10]
+            ] 
+        };
+
+        function save() {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } 
+            catch(e) { console.error("Quota exceeded"); }
+        }
+
+        function finalizeCreation() {
+            state.name = document.getElementById('init-name').value || "CAÇADOR";
+            state.job = document.getElementById('init-class').value;
+            state.creationDate = new Date().getTime();
+            document.getElementById('creation-overlay').style.display = 'none';
+            save(); refreshUI();
+        }
+
         function handleImageUpload(input) {
             const file = input.files[0];
             if (!file) return;
@@ -7,33 +271,98 @@
                 img.src = e.target.result;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    // Aumentamos para 320px para manter densidade de pixels (Super Sampling)
-                    const size = 320; 
-                    canvas.width = size; 
-                    canvas.height = size;
-                    
-                    const ctx = canvas.getContext('2d');
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-
-                    // Cálculo para manter o aspecto centralizado (Crop Square)
-                    let sourceX = 0, sourceY = 0, sourceSize = img.width;
-                    if (img.width > img.height) {
-                        sourceSize = img.height;
-                        sourceX = (img.width - img.height) / 2;
-                    } else {
-                        sourceSize = img.width;
-                        sourceY = (img.height - img.width) / 2;
-                    }
-
-                    ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
-                    
-                    // Exportando em PNG para máxima qualidade
-                    state.img = canvas.toDataURL('image/png');
-                    save(); 
-                    refreshUI();
+                    canvas.width = 160; canvas.height = 160;
+                    canvas.getContext('2d').drawImage(img, 0, 0, 160, 160);
+                    state.img = canvas.toDataURL('image/jpeg', 0.6);
+                    save(); refreshUI();
                 }
             };
             reader.readAsDataURL(file);
         }
-        
+
+        function calculateDays() {
+            if(!state.creationDate) return 0;
+            const now = new Date().getTime();
+            const diff = now - state.creationDate;
+            return Math.floor(diff / (1000 * 60 * 60 * 24));
+        }
+
+        function changeXP(amt) {
+            state.xp += amt;
+            if(state.xp >= 100) { state.lvl++; state.xp = 0; }
+            if(state.xp < 0) state.xp = 0;
+            save(); refreshUI();
+        }
+
+        function addLevel() { state.lvl++; save(); refreshUI(); }
+
+        function renderSkills() {
+            const matrix = document.getElementById('mission-matrix');
+            if (!matrix) return;
+            let html = '';
+            for(let i = 0; i < 15; i++) {
+                const req = (i + 1) * 5;
+                const indices = [i*3, i*3+1, i*3+2];
+                const tierTaken = state.unlockedSkills.some(idx => indices.includes(idx));
+                
+                indices.forEach(idx => {
+                    const isUnlocked = state.unlockedSkills.includes(idx);
+                    const canUnlock = state.lvl >= req && !tierTaken;
+                    const status = isUnlocked ? 'unlocked' : (canUnlock ? 'available' : (tierTaken ? 'blocked' : ''));
+                    html += `<div class="mission-node ${status}" onclick="openSkill(${idx}, ${req}, ${isUnlocked}, ${canUnlock}, ${tierTaken})">
+                        <span style="font-size:0.4rem; opacity:0.4;">LVL ${req}</span><br>${skills[idx].name.substring(0,8)}
+                    </div>`;
+                });
+            }
+            matrix.innerHTML = html;
+            document.getElementById('tier-info').innerText = `TIERS: ${Math.floor(state.lvl/5)}/15`;
+        }
+
+        function openSkill(id, req, unlocked, available, blocked) {
+            const pop = document.getElementById('popup');
+            document.getElementById('pop-title').innerText = skills[id].name.toUpperCase();
+            document.getElementById('pop-desc').innerText = skills[id].desc;
+            document.getElementById('pop-req').innerText = `REQUISITO: NÍVEL ${req}`;
+            const action = document.getElementById('pop-actions');
+            
+            if(unlocked) action.innerHTML = '<p style="color:var(--xp-color)">HABILIDADE ATIVA</p>';
+            else if(available) action.innerHTML = `<button class="btn" onclick="buySkill(${id})">ADQUIRIR</button>`;
+            else action.innerHTML = '<p style="color:red">BLOQUEADO</p>';
+            
+            pop.style.display = 'block';
+        }
+
+        function buySkill(id) { state.unlockedSkills.push(id); save(); closePopup(); refreshUI(); }
+        function closePopup() { document.getElementById('popup').style.display = 'none'; }
+
+        function refreshUI() {
+            document.getElementById('disp-name').innerText = state.name;
+            document.getElementById('disp-class').innerText = state.job.toUpperCase();
+            document.getElementById('lvl-txt').innerText = state.lvl.toString().padStart(2, '0');
+            document.getElementById('days-txt').innerText = `ACTIVE DAYS: ${calculateDays()}`;
+            document.getElementById('xp-fill').style.width = state.xp + '%';
+            if(state.img) document.getElementById('p-img').src = state.img;
+            
+            document.getElementById('attr-container').innerHTML = state.attrs.map((a, i) => `
+                <div class="attr-item">
+                    <input type="text" class="attr-name-input" value="${a[0]}" onchange="state.attrs[${i}][0]=this.value.toUpperCase();save()">
+                    <input type="number" class="attr-val-input" value="${a[1]}" onchange="state.attrs[${i}][1]=this.value;save()">
+                </div>
+            `).join('');
+            renderSkills();
+        }
+
+        function resetCharacter() { if(confirm("REINICIAR TUDO? ISSO APAGARÁ O CONTADOR DE DIAS.")) { localStorage.clear(); location.reload(); } }
+
+        window.onload = () => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if(saved) { 
+                state = JSON.parse(saved); 
+                refreshUI(); 
+            } else { 
+                document.getElementById('creation-overlay').style.display = 'flex'; 
+            }
+        }
+    </script>
+</body>
+</html>
