@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHADOW SYSTEM | Hunter Core v14</title>
+    <style>
+        :root {
+            --bg: #0a0a0b;
+            --panel: #141417;
+            --accent: #00f2ff;
+            --text: #e0e0e0;
+            --border: #2d2d32;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: var(--bg); color: var(--text); margin: 0; padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .main-wrapper { max-width: 1200px; margin: 0 auto; }
+        .container { display: grid; grid-template-columns: 300px 1fr 300px; gap: 20px; }
+        
+        @media (max-width: 1100px) { .container { grid-template-columns: 1fr; } }
+
+        .panel { 
+            background: var(--panel); border: 1px solid var(--border); 
+            padding: 20px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        /* Avatar */
+        .avatar-box {
+            width: 150px; height: 150px; margin: 0 auto 15px;
+            border: 1px solid var(--border); border-radius: 4px;
+            position: relative; overflow: hidden; cursor: pointer;
+            background: #0d0d0f; display: flex; align-items: center; justify-content: center;
+        }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-hint { font-size: 9px; color: #444; text-align: center; text-transform: uppercase; }
+
+        .lvl-display { font-size: 72px; font-weight: 900; color: var(--accent); line-height: 1; text-align: center; }
+        .xp-bar { width: 100%; height: 8px; background: #222; margin: 15px 0; border-radius: 4px; overflow: hidden; }
+        .xp-fill { background: var(--accent); height: 100%; width: 0%; transition: 0.6s; }
+
+        .skill-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .skill-node { 
+            border: 1px solid var(--border); padding: 8px 2px; font-size: 10px; 
+            text-align: center; cursor: pointer; height: 35px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.02);
+        }
+        .unlocked { background: var(--accent) !important; color: #000 !important; font-weight: bold; }
+        .available { border: 2px solid var(--accent); color: var(--accent); }
+        .blocked { opacity: 0.15; cursor: not-allowed; }
+
+        .attr-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #222; }
+        .attr-val-input { background: transparent; border: none; color: var(--accent); text-align: right; width: 50px; font-weight: bold; font-size: 16px; }
+
+        .mission-box { 
+            background: #1a1a1e; border-left: 4px solid var(--accent); padding: 20px; margin-top: 15px; position: relative;
+        }
+        .ai-tag { position: absolute; top: -10px; right: 10px; background: var(--accent); color: #000; font-size: 9px; padding: 2px 8px; font-weight: bold; }
+
+        .overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px; }
+        .creation-card { width: 100%; max-width: 500px; background: #0d0d0f; border: 1px solid #1a1a1e; padding: 30px; }
+        
+        .class-card { border: 1px solid var(--border); padding: 10px; cursor: pointer; margin-bottom: 5px; font-size: 13px; }
+        .class-card.active { border-color: var(--accent); background: rgba(0, 242, 255, 0.05); }
+
+        .attr-table { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+        .attr-chip { border: 1px solid var(--border); padding: 8px; font-size: 10px; text-align: center; cursor: pointer; color: #666; }
+        .attr-chip.selected { border-color: var(--accent); color: var(--accent); }
+
+        #popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); border: 2px solid var(--accent); padding: 25px; z-index: 2000; width: 300px; text-align: center; }
+        
+        button { cursor: pointer; padding: 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-weight: bold; text-transform: uppercase; width: 100%; }
+        button:hover:not(:disabled) { background: var(--accent); color: #000; }
+        button:disabled { opacity: 0.3; }
+        
+        .hidden { display: none !important; }
+        input { background: #1a1a1e; border: 1px solid var(--border); color: #fff; padding: 12px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <div id="creation-overlay" class="overlay hidden">
+        <div class="creation-card">
+            <h1 style="letter-spacing: 8px; text-align: center; color: var(--accent); margin:0;">DESPERTAR</h1>
+            <div id="step-1">
+                <p style="text-align: center; font-size: 10px; color: #555; margin-bottom: 20px;">IDENTIDADE DO HUNTER</p>
+                <input type="text" id="init-name" placeholder="NOME DO PLAYER" maxlength="15">
+                <button onclick="nextStep(2)">PRÓXIMO</button>
+            </div>
+            <div id="step-2" class="hidden">
+                <p style="text-align: center; font-size: 10px; color: #555; margin-bottom: 20px;">ESCOLHA SUA CLASSE</p>
+                <div id="class-list"></div>
+                <button onclick="nextStep(3)">PRÓXIMO</button>
+            </div>
+            <div id="step-3" class="hidden">
+                <p style="text-align: center; font-size: 10px; color: #555; margin-bottom: 20px;">SELEÇÃO DE DNA (ESCOLHA 6)</p>
+                <div id="attr-selector-table" class="attr-table"></div>
+                <p id="counter-txt" style="text-align: center; font-weight: bold; color: var(--accent); margin: 15px 0;">0/6</p>
+                <button onclick="finalizeCreation()" id="btn-start" disabled>VINCULAR ALMA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="popup" class="hidden">
+        <h3 id="pop-title" style="color: var(--accent); margin:0;"></h3>
+        <p id="pop-desc" style="font-size: 13px; color: #aaa;"></p>
+        <p id="pop-req" style="font-size: 10px; color: var(--accent); margin-top: 10px;"></p>
+        <div id="pop-actions"></div>
+        <button onclick="closePopup()" style="border:none; font-size:10px; margin-top:10px;">VOLTAR</button>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="container">
+            <div class="panel">
+                <div class="avatar-box" onclick="document.getElementById('file-input').click()">
+                    <div id="avatar-display" class="avatar-hint">UPLOAD FOTO</div>
+                    <img id="avatar-img" class="avatar-img hidden">
+                </div>
+                <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+
+                <h3 id="disp-name" style="margin:0; text-align: center; letter-spacing: 2px;">---</h3>
+                <small id="disp-meta" style="color: var(--accent); font-weight: bold; display: block; text-align: center; margin-bottom: 15px;">---</small>
+                
+                <div class="lvl-display" id="lvl-txt">01</div>
+                <div class="xp-bar"><div id="xp-fill" class="xp-fill"></div></div>
+                <button onclick="changeXP(1)" style="font-size: 10px;">GRIND MANUAL (+1%)</button>
+                <button onclick="resetCharacter()" style="border:none; color: #444; font-size:9px; margin-top:20px; width:100%;">RESET TOTAL</button>
+            </div>
+
+            <div class="center-panel">
+                <div class="panel" style="margin-bottom: 20px; border-top: 3px solid var(--accent);">
+                    <button onclick="generateAIContextualMission()">BUSCAR MISSÃO INTELIGENTE</button>
+                    <div id="ai-mission-display"></div>
+                </div>
+                <div class="panel">
+                    <h4 style="color: #444; text-align:center; letter-spacing:4px;">SKILL TREE (PASSIVAS)</h4>
+                    <div id="mission-matrix" class="skill-grid"></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h4 style="text-align:center;">STATUS BUILD</h4>
+                <div id="attr-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'shadow_master_v14_6attr';
+        
+        const semanticBrain = {
+            fisico: ["FOR", "VIT", "DEF", "AGI", "RES", "TEN", "OSS", "VEL", "COR", "FUR"],
+            mental: ["INT", "SAB", "CON", "ALQ", "PER", "PRE"],
+            social: ["CAR", "ART", "INF", "HON", "EMO"],
+            espiritual: ["MANA", "ALMA", "SOM", "RIT", "MAL", "NAT", "ARC"],
+            financeiro: ["SOR", "OURO"]
+        };
+
+        const missionTemplates = {
+            fisico: ["20 Flexões", "Caminhada de 15 min", "Prancha 1 min", "Beber 500ml água"],
+            mental: ["Ler 10 páginas", "Estudar 20 min", "Resolver problema lógico"],
+            social: ["Mensagem de gratidão", "Elogio honesto", "Praticar escuta ativa"],
+            espiritual: ["10 min Meditação", "Banho frio", "Escrever 3 metas"],
+            financeiro: ["Registrar despesas", "Não comprar por impulso", "Estudar 1 ativo"],
+            default: ["Arrumar a cama", "Beber 2L de água"]
+        };
+
+        const classes = {
+            samurai: { name: "Samurai", bonus: {AGI: 5, PRE: 3}, desc: "Foco em velocidade e precisão." },
+            guerreiro: { name: "Guerreiro", bonus: {FOR: 5, VIT: 3}, desc: "Foco em força e resistência." },
+            bardo: { name: "Bardo", bonus: {CAR: 5, INF: 3}, desc: "Foco em comunicação e arte." },
+            mago: { name: "Mago", bonus: {INT: 5, SAB: 3}, desc: "Foco em estratégia e lógica." },
+            elfo: { name: "Elfo", bonus: {CON: 5, PER: 3}, desc: "Foco em percepção e calma." },
+            necromante: { name: "Necromante", bonus: {ALMA: 5, RES: 3}, desc: "Foco no oculto e resiliência." }
+        };
+
+        const skills = [
+            { name: "Resiliência", desc: "Recuperar-se de falhas sem perder o foco." },
+            { name: "Foco Absoluto", desc: "Triplicar a produção de trabalho." },
+            { name: "Mão do Rei", desc: "Habilidade de delegar tarefas." },
+            { name: "Visão Analítica", desc: "Prever tendências de mercado." },
+            { name: "Comunicação", desc: "Transmitir ideias de forma simples." },
+            { name: "I. Emocional", desc: "Controlar reações internas." },
+            { name: "Disciplina", desc: "Executar rotinas independente do ânimo." },
+            { name: "Negociação", desc: "Equilíbrio de ganhos mútuos." },
+            { name: "Leitura Veloz", desc: "Absorver informação na metade do tempo." }
+        ];
+        while(skills.length < 45) skills.push({ name: "Maestria", desc: "Domínio avançado de competências." });
+
+        const allAttrs = ["FOR", "VIT", "DEF", "RES", "TEN", "AGI", "COR", "PRE", "HON", "VEL", "CAR", "SOR", "EMO", "ART", "INF", "INT", "MANA", "CON", "SAB", "ALQ", "SOM", "ALMA", "MAL", "RIT", "OSS", "ARC", "NAT", "PER", "FUR", "OURO"];
+
+        let state = { name: "", class: "", lvl: 1, xp: 0, unlockedSkills: [], attrs: [], img: null };
+        let tempSelection = { class: '', attrs: [] };
+
+        function handleImageUpload(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => { state.img = e.target.result; save(); refreshUI(); };
+            reader.readAsDataURL(file);
+        }
+
+        function setClass(id) {
+            tempSelection.class = id;
+            document.querySelectorAll('.class-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`class-${id}`).classList.add('active');
+        }
+
+        function toggleAttr(attr) {
+            const idx = tempSelection.attrs.indexOf(attr);
+            if (idx > -1) tempSelection.attrs.splice(idx, 1);
+            else if (tempSelection.attrs.length < 6) tempSelection.attrs.push(attr);
+            
+            document.querySelectorAll('.attr-chip').forEach(c => {
+                c.classList.toggle('selected', tempSelection.attrs.includes(c.innerText));
+            });
+            
+            document.getElementById('counter-txt').innerText = `${tempSelection.attrs.length}/6 DNA`;
+            document.getElementById('btn-start').disabled = tempSelection.attrs.length !== 6;
+        }
+
+        function nextStep(step) {
+            if(step === 2 && !document.getElementById('init-name').value) return alert("Insira um nome.");
+            if(step === 3 && !tempSelection.class) return alert("Escolha uma classe.");
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('step-3').classList.add('hidden');
+            document.getElementById('step-' + step).classList.remove('hidden');
+        }
+
+        function finalizeCreation() {
+            const bc = classes[tempSelection.class];
+            state.name = document.getElementById('init-name').value.toUpperCase();
+            state.class = bc.name;
+            state.attrs = tempSelection.attrs.map(a => [a, 5 + (bc.bonus[a] || 0)]);
+            document.getElementById('creation-overlay').classList.add('hidden');
+            save(); refreshUI();
+        }
+
+        function generateAIContextualMission() {
+            let weakestIdx = 0;
+            for(let i=1; i < state.attrs.length; i++) {
+                if(state.attrs[i][1] < state.attrs[weakestIdx][1]) weakestIdx = i;
+            }
+            let attrName = state.attrs[weakestIdx][0];
+            let category = "default";
+            for (let [cat, keywords] of Object.entries(semanticBrain)) {
+                if (keywords.includes(attrName)) { category = cat; break; }
+            }
+            let mission = missionTemplates[category][Math.floor(Math.random() * missionTemplates[category].length)];
+            document.getElementById('ai-mission-display').innerHTML = `
+                <div class="mission-box">
+                    <span class="ai-tag">ANALYSIS</span>
+                    <p style="font-size:11px; margin:0">FOCANDO EM: <b style="color:var(--accent)">${attrName}</b></p>
+                    <p style="margin:10px 0; font-size:16px;"><b>MISSÃO:</b> ${mission}</p>
+                    <button onclick="completeMission(${weakestIdx}, 5)">COMPLETAR (+5% XP)</button>
+                </div>`;
+        }
+
+        function completeMission(idx, amt) {
+            state.attrs[idx][1] += 1;
+            changeXP(amt);
+            document.getElementById('ai-mission-display').innerHTML = '';
+        }
+
+        function renderSkills() {
+            const matrix = document.getElementById('mission-matrix');
+            let html = '';
+            for(let i = 0; i < 15; i++) {
+                const req = (i + 1) * 5; 
+                const indices = [i*3, i*3+1, i*3+2];
+                const tierTaken = state.unlockedSkills.some(idx => indices.includes(idx));
+                indices.forEach(idx => {
+                    const isUnlocked = state.unlockedSkills.includes(idx);
+                    const canUnlock = state.lvl >= req && !tierTaken;
+                    const status = isUnlocked ? 'unlocked' : (canUnlock ? 'available' : (tierTaken ? 'blocked' : ''));
+                    html += `<div class="skill-node ${status}" onclick="openSkill(${idx}, ${req}, ${isUnlocked}, ${canUnlock})">${skills[idx].name.substring(0,5)}.</div>`;
+                });
+            }
+            matrix.innerHTML = html;
+        }
+
+        function openSkill(id, req, unlocked, available) {
+            document.getElementById('pop-title').innerText = skills[id].name.toUpperCase();
+            document.getElementById('pop-desc').innerText = skills[id].desc;
+            document.getElementById('pop-req').innerText = `REQUISITO: NÍVEL ${req}`;
+            const action = document.getElementById('pop-actions');
+            if(unlocked) action.innerHTML = 'ATIVA';
+            else if(available) action.innerHTML = `<button onclick="buySkill(${id})">ADQUIRIR</button>`;
+            else action.innerHTML = `BLOQUEADO`;
+            document.getElementById('popup').classList.remove('hidden');
+        }
+
+        function buySkill(id) { state.unlockedSkills.push(id); save(); closePopup(); refreshUI(); }
+        function closePopup() { document.getElementById('popup').classList.add('hidden'); }
+
+        function changeXP(amt) {
+            state.xp += amt;
+            while(state.xp >= 100) { state.lvl++; state.xp -= 100; alert(`LEVEL UP! Nível ${state.lvl}`); }
+            save(); refreshUI();
+        }
+
+        function refreshUI() {
+            document.getElementById('disp-name').innerText = state.name;
+            document.getElementById('disp-meta').innerText = state.class.toUpperCase();
+            document.getElementById('lvl-txt').innerText = state.lvl.toString().padStart(2, '0');
+            document.getElementById('xp-fill').style.width = state.xp + '%';
+            
+            if(state.img) {
+                document.getElementById('avatar-img').src = state.img;
+                document.getElementById('avatar-img').classList.remove('hidden');
+                document.getElementById('avatar-display').classList.add('hidden');
+            }
+
+            document.getElementById('attr-container').innerHTML = state.attrs.map((a, i) => `
+                <div class="attr-item"><span>${a[0]}</span><input type="number" class="attr-val-input" value="${a[1]}" onchange="state.attrs[${i}][1]=parseInt(this.value)||0;save();"></div>
+            `).join('');
+            renderSkills();
+        }
+
+        function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+        function resetCharacter() { if(confirm("REINICIAR TUDO?")) { localStorage.clear(); location.reload(); } }
+
+        window.onload = () => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) { state = JSON.parse(saved); refreshUI(); } 
+            else { 
+                document.getElementById('creation-overlay').classList.remove('hidden'); 
+                document.getElementById('class-list').innerHTML = Object.entries(classes).map(([id, c]) => `
+                    <div class="class-card" id="class-${id}" onclick="setClass('${id}')">
+                        <strong>${c.name}</strong><br><small>${c.desc}</small>
+                    </div>
+                `).join('');
+                document.getElementById('attr-selector-table').innerHTML = allAttrs.map(attr => `<div class="attr-chip" onclick="toggleAttr('${attr}')">${attr}</div>`).join('');
+            }
+        }
+    </script>
+</body>
+</html>
